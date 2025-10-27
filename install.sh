@@ -168,30 +168,40 @@ EOF
 
 echo -e "${GREEN}Step 8: Configuring wlan1 static IP...${NC}"
 
-# Remove any existing wlan1 connection in NetworkManager
-nmcli connection delete "Hotspot" 2>/dev/null || true
-nmcli connection delete "wlan1" 2>/dev/null || true
-
-# Create NetworkManager connection for wlan1
-nmcli connection add type wifi ifname wlan1 con-name "Hotspot" autoconnect yes ssid "$HOTSPOT_SSID" -- \
-    wifi-sec.key-mgmt none \
-    ipv4.method manual \
-    ipv4.address $HOTSPOT_IP/24
-
-# Alternative: Add to dhcpcd.conf if using dhcpcd instead of NetworkManager
-if [ -f /etc/dhcpcd.conf ]; then
-    # Remove existing wlan1 configuration
-    sed -i '/interface wlan1/,/^$/d' /etc/dhcpcd.conf
-    
-    # Add new configuration
-    cat >> /etc/dhcpcd.conf <<EOF
-
-# WiFi Manager wlan1 static IP
-interface wlan1
-    static ip_address=$HOTSPOT_IP/24
-    nohook wpa_supplicant
+# Tell NetworkManager to NOT manage wlan1 (it conflicts with hostapd)
+echo "Configuring NetworkManager to ignore wlan1..."
+cat > /etc/NetworkManager/conf.d/unmanaged-wlan1.conf <<EOF
+[keyfile]
+unmanaged-devices=interface-name:wlan1
 EOF
-fi
+
+# Restart NetworkManager to apply the change
+systemctl restart NetworkManager
+
+# Create systemd service to configure wlan1 at boot
+cat > /etc/systemd/system/wlan1-config.service <<EOF
+[Unit]
+Description=Configure wlan1 for WiFi Manager Hotspot
+After=network-pre.target
+Before=network.target hostapd.service
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/ip link set wlan1 up
+ExecStart=/sbin/ip addr add $HOTSPOT_IP/24 dev wlan1
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable the wlan1 configuration service
+systemctl enable wlan1-config.service
+
+# Start the service now
+systemctl start wlan1-config.service
+
+echo "wlan1 configured with IP $HOTSPOT_IP"
 
 echo -e "${GREEN}Step 9: Configuring Avahi (for wifi.local domain)...${NC}"
 
