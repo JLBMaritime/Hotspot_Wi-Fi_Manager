@@ -222,8 +222,31 @@ systemctl daemon-reload
 
 echo -e "${GREEN}Step 11: Enabling IP forwarding...${NC}"
 
-# Enable IP forwarding
-sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+# Check if /etc/sysctl.conf exists, create if not
+if [ ! -f /etc/sysctl.conf ]; then
+    echo "Creating /etc/sysctl.conf..."
+    cat > /etc/sysctl.conf <<EOF
+# /etc/sysctl.conf - Configuration file for setting system variables
+# See /etc/sysctl.d/ for additional system variables.
+# See sysctl.conf (5) for information.
+
+# Enable IP forwarding for WiFi Manager
+net.ipv4.ip_forward=1
+EOF
+else
+    # File exists, check if IP forwarding is already enabled
+    if grep -q "^net.ipv4.ip_forward=1" /etc/sysctl.conf; then
+        echo "IP forwarding already enabled in sysctl.conf"
+    elif grep -q "^#net.ipv4.ip_forward=1" /etc/sysctl.conf; then
+        # Uncomment the existing line
+        sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+    else
+        # Add the setting
+        echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+    fi
+fi
+
+# Apply sysctl settings
 sysctl -p
 
 # Add iptables rules for NAT (so hotspot clients can access internet via wlan0)
