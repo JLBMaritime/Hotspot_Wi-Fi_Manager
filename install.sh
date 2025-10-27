@@ -178,17 +178,49 @@ EOF
 # Restart NetworkManager to apply the change
 systemctl restart NetworkManager
 
+# Create script to configure wlan1
+cat > /usr/local/bin/configure-wlan1.sh <<'EOF'
+#!/bin/bash
+# Wait for wlan1 to be available (up to 30 seconds)
+for i in {1..30}; do
+    if ip link show wlan1 &>/dev/null; then
+        break
+    fi
+    sleep 1
+done
+
+# Check if wlan1 exists
+if ! ip link show wlan1 &>/dev/null; then
+    echo "Error: wlan1 interface not found after 30 seconds"
+    exit 1
+fi
+
+# Bring interface up
+ip link set wlan1 up
+
+# Check if IP is already assigned
+if ! ip addr show wlan1 | grep -q "192.168.4.1/24"; then
+    # Add IP address
+    ip addr add 192.168.4.1/24 dev wlan1
+    echo "wlan1 configured with IP 192.168.4.1/24"
+else
+    echo "wlan1 already has IP 192.168.4.1/24"
+fi
+EOF
+
+chmod +x /usr/local/bin/configure-wlan1.sh
+
 # Create systemd service to configure wlan1 at boot
 cat > /etc/systemd/system/wlan1-config.service <<EOF
 [Unit]
 Description=Configure wlan1 for WiFi Manager Hotspot
-After=network-pre.target
-Before=network.target hostapd.service
+After=network-pre.target sys-subsystem-net-devices-wlan1.device
+Wants=sys-subsystem-net-devices-wlan1.device
+Before=hostapd.service dnsmasq.service
 
 [Service]
 Type=oneshot
-ExecStart=/sbin/ip link set wlan1 up
-ExecStart=/sbin/ip addr add $HOTSPOT_IP/24 dev wlan1
+ExecStart=/usr/local/bin/configure-wlan1.sh
 RemainAfterExit=yes
 
 [Install]
