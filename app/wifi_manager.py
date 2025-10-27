@@ -91,18 +91,29 @@ def get_connection_ip():
 
 def connect_to_network(ssid, password=None):
     """Connect to a WiFi network"""
-    # Check if connection already exists
-    check_cmd = f"nmcli connection show '{ssid}'"
-    _, _, check_code = run_command(check_cmd)
-    
-    if check_code == 0:
-        # Connection exists, just activate it
-        command = f"nmcli connection up '{ssid}' ifname wlan0"
+    # If password is provided, delete any existing connection first
+    # This ensures the new password is used
+    if password:
+        check_cmd = f"nmcli connection show '{ssid}'"
+        _, _, check_code = run_command(check_cmd)
+        
+        if check_code == 0:
+            # Delete existing connection
+            delete_cmd = f"nmcli connection delete '{ssid}'"
+            run_command(delete_cmd)
+        
+        # Create new connection with password
+        command = f"nmcli device wifi connect '{ssid}' password '{password}' ifname wlan0"
     else:
-        # New connection
-        if password:
-            command = f"nmcli device wifi connect '{ssid}' password '{password}' ifname wlan0"
+        # For open networks, try to reuse existing connection
+        check_cmd = f"nmcli connection show '{ssid}'"
+        _, _, check_code = run_command(check_cmd)
+        
+        if check_code == 0:
+            # Connection exists, activate it
+            command = f"nmcli connection up '{ssid}' ifname wlan0"
         else:
+            # Create new connection for open network
             command = f"nmcli device wifi connect '{ssid}' ifname wlan0"
     
     stdout, stderr, returncode = run_command(command)
