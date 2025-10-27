@@ -22,6 +22,22 @@ def run_command(command):
     except Exception as e:
         return "", str(e), 1
 
+def run_command_with_args(args):
+    """Execute a command with argument list (no shell, safer for passwords)"""
+    try:
+        result = subprocess.run(
+            args,
+            shell=False,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        return result.stdout.strip(), result.stderr.strip(), result.returncode
+    except subprocess.TimeoutExpired:
+        return "", "Command timed out", 1
+    except Exception as e:
+        return "", str(e), 1
+
 def scan_networks():
     """Scan for available WiFi networks using nmcli"""
     command = "nmcli -t -f SSID,SIGNAL,SECURITY device wifi list ifname wlan0"
@@ -98,25 +114,27 @@ def connect_to_network(ssid, password=None):
         _, _, check_code = run_command(check_cmd)
         
         if check_code == 0:
-            # Delete existing connection
-            delete_cmd = f"nmcli connection delete '{ssid}'"
-            run_command(delete_cmd)
+            # Delete existing connection using args (safer for special chars in SSID)
+            delete_args = ['nmcli', 'connection', 'delete', ssid]
+            run_command_with_args(delete_args)
         
-        # Create new connection with password
-        command = f"nmcli device wifi connect '{ssid}' password '{password}' ifname wlan0"
+        # Create new connection with password using args (safer for special chars)
+        connect_args = ['nmcli', 'device', 'wifi', 'connect', ssid, 
+                       'password', password, 'ifname', 'wlan0']
+        stdout, stderr, returncode = run_command_with_args(connect_args)
     else:
         # For open networks, try to reuse existing connection
         check_cmd = f"nmcli connection show '{ssid}'"
         _, _, check_code = run_command(check_cmd)
         
         if check_code == 0:
-            # Connection exists, activate it
-            command = f"nmcli connection up '{ssid}' ifname wlan0"
+            # Connection exists, activate it using args
+            connect_args = ['nmcli', 'connection', 'up', ssid, 'ifname', 'wlan0']
+            stdout, stderr, returncode = run_command_with_args(connect_args)
         else:
-            # Create new connection for open network
-            command = f"nmcli device wifi connect '{ssid}' ifname wlan0"
-    
-    stdout, stderr, returncode = run_command(command)
+            # Create new connection for open network using args
+            connect_args = ['nmcli', 'device', 'wifi', 'connect', ssid, 'ifname', 'wlan0']
+            stdout, stderr, returncode = run_command_with_args(connect_args)
     
     if returncode == 0:
         # Add to saved networks database
