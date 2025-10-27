@@ -81,7 +81,7 @@ pip3 install --break-system-packages Flask Flask-HTTPAuth netifaces || pip3 inst
 
 The default hotspot configuration is:
 - **SSID**: JLBMaritime-AIS
-- **Password**: Admin
+- **Password**: Admin123
 - **IP Address**: 192.168.4.1
 - **DHCP Range**: 192.168.4.2 - 192.168.4.20
 
@@ -108,7 +108,7 @@ USERS = {
 
 1. Connect to the WiFi hotspot:
    - SSID: `JLBMaritime-AIS`
-   - Password: `Admin`
+   - Password: `Admin123`
 
 2. Open a web browser and navigate to:
    - `http://wifi.local` or
