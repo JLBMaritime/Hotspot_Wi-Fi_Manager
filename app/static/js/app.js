@@ -79,9 +79,17 @@ function loadAvailableNetworks() {
             if (data.success && data.networks.length > 0) {
                 container.innerHTML = '';
                 data.networks.forEach(network => {
+                    // Skip if this is the current connection
+                    if (network.ssid === currentSSID) return;
+                    
                     const networkElement = createNetworkElement(network, false);
                     container.appendChild(networkElement);
                 });
+                
+                // Check if any networks were added
+                if (container.children.length === 0) {
+                    container.innerHTML = '<div class="loading">No other networks found</div>';
+                }
             } else {
                 container.innerHTML = '<div class="loading">No networks found</div>';
             }
@@ -107,9 +115,17 @@ function rescanNetworks() {
             if (data.success && data.networks.length > 0) {
                 container.innerHTML = '';
                 data.networks.forEach(network => {
+                    // Skip if this is the current connection
+                    if (network.ssid === currentSSID) return;
+                    
                     const networkElement = createNetworkElement(network, false);
                     container.appendChild(networkElement);
                 });
+                
+                // Check if any networks were added
+                if (container.children.length === 0) {
+                    container.innerHTML = '<div class="loading">No other networks found</div>';
+                }
                 showToast('Scan complete', 'success');
             } else {
                 container.innerHTML = '<div class="loading">No networks found</div>';
@@ -197,7 +213,16 @@ function createNetworkElement(network, isSaved) {
     const connectBtn = document.createElement('button');
     connectBtn.className = 'btn btn-secondary';
     connectBtn.textContent = 'Connect';
-    connectBtn.addEventListener('click', () => showPasswordModal(network.ssid));
+    
+    // Different behavior for saved networks vs available networks
+    if (isSaved) {
+        // Saved networks: direct connect with confirmation (no password needed)
+        connectBtn.addEventListener('click', () => connectToSavedNetwork(network.ssid));
+    } else {
+        // Available networks: show password modal
+        connectBtn.addEventListener('click', () => showPasswordModal(network.ssid));
+    }
+    
     actionsDiv.appendChild(connectBtn);
     
     // Forget button (only for saved networks, not current connection)
@@ -237,6 +262,37 @@ function showPasswordModal(ssid) {
 function closeModal() {
     const modal = document.getElementById('password-modal');
     modal.classList.remove('show');
+}
+
+// Connect to saved network (without password prompt)
+function connectToSavedNetwork(ssid) {
+    if (!confirm(`Connect to "${ssid}"?`)) {
+        return;
+    }
+    
+    showToast('Connecting...', 'success');
+    
+    fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid: ssid, password: '' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Connected successfully', 'success');
+            setTimeout(() => {
+                loadCurrentConnection();
+                loadSavedNetworks();
+            }, 1000);
+        } else {
+            showToast(data.message || 'Connection failed', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error connecting:', error);
+        showToast('Connection error', 'error');
+    });
 }
 
 // Connect from modal
