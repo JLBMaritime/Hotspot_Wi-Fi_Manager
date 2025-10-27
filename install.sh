@@ -60,17 +60,63 @@ apt-get install -y \
 echo -e "${GREEN}Step 3: Installing Python dependencies...${NC}"
 pip3 install --break-system-packages Flask Flask-HTTPAuth netifaces || pip3 install Flask Flask-HTTPAuth netifaces
 
-echo -e "${GREEN}Step 4: Creating installation directory...${NC}"
+echo -e "${GREEN}Step 4: Creating installation directory structure...${NC}"
+# Create main directory
 mkdir -p $INSTALL_DIR
-cp -r . $INSTALL_DIR/
+
+# Create subdirectories
+mkdir -p $INSTALL_DIR/app
+mkdir -p $INSTALL_DIR/app/templates
+mkdir -p $INSTALL_DIR/app/static
+mkdir -p $INSTALL_DIR/app/static/css
+mkdir -p $INSTALL_DIR/app/static/js
+mkdir -p $INSTALL_DIR/cli
+mkdir -p $INSTALL_DIR/config
+
+echo -e "${GREEN}Step 5: Copying application files...${NC}"
+# Copy main application files
+cp run.py $INSTALL_DIR/
+cp requirements.txt $INSTALL_DIR/
+cp README.md $INSTALL_DIR/ 2>/dev/null || echo "README.md not found, skipping..."
+
+# Copy app directory files
+cp app/__init__.py $INSTALL_DIR/app/
+cp app/routes.py $INSTALL_DIR/app/
+cp app/wifi_manager.py $INSTALL_DIR/app/
+cp app/network_diagnostics.py $INSTALL_DIR/app/
+cp app/database.py $INSTALL_DIR/app/
+
+# Copy templates
+cp app/templates/index.html $INSTALL_DIR/app/templates/
+
+# Copy static files
+cp app/static/css/style.css $INSTALL_DIR/app/static/css/
+cp app/static/js/app.js $INSTALL_DIR/app/static/js/
+
+# Copy logo if it exists
+if [ -f logo.png ]; then
+    cp logo.png $INSTALL_DIR/app/static/
+    echo "Logo copied"
+elif [ -f app/static/logo.png ]; then
+    cp app/static/logo.png $INSTALL_DIR/app/static/
+    echo "Logo copied from static directory"
+else
+    echo -e "${YELLOW}Warning: logo.png not found. Please add it to $INSTALL_DIR/app/static/ later${NC}"
+fi
+
+# Copy CLI files
+cp cli/wifi_cli.py $INSTALL_DIR/cli/
+
+# Set permissions
+chmod +x $INSTALL_DIR/run.py
+chmod +x $INSTALL_DIR/cli/wifi_cli.py
+
+# Change to installation directory
 cd $INSTALL_DIR
 
-# Make scripts executable
-chmod +x run.py
-chmod +x cli/wifi_cli.py
-chmod +x install.sh
+echo "Files copied to $INSTALL_DIR"
 
-echo -e "${GREEN}Step 5: Configuring hostapd (WiFi hotspot)...${NC}"
+echo -e "${GREEN}Step 6: Configuring hostapd (WiFi hotspot)...${NC}"
 
 # Stop services
 systemctl stop hostapd 2>/dev/null || true
@@ -103,7 +149,7 @@ EOF
 # Point hostapd to config file
 sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' /etc/default/hostapd
 
-echo -e "${GREEN}Step 6: Configuring dnsmasq (DHCP server)...${NC}"
+echo -e "${GREEN}Step 7: Configuring dnsmasq (DHCP server)...${NC}"
 
 # Backup existing configuration
 if [ -f /etc/dnsmasq.conf ]; then
@@ -119,7 +165,7 @@ domain=wlan
 address=/wifi.local/$HOTSPOT_IP
 EOF
 
-echo -e "${GREEN}Step 7: Configuring wlan1 static IP...${NC}"
+echo -e "${GREEN}Step 8: Configuring wlan1 static IP...${NC}"
 
 # Remove any existing wlan1 connection in NetworkManager
 nmcli connection delete "Hotspot" 2>/dev/null || true
@@ -146,13 +192,13 @@ interface wlan1
 EOF
 fi
 
-echo -e "${GREEN}Step 8: Configuring Avahi (for wifi.local domain)...${NC}"
+echo -e "${GREEN}Step 9: Configuring Avahi (for wifi.local domain)...${NC}"
 
 # Ensure avahi-daemon is enabled
 systemctl enable avahi-daemon
 systemctl restart avahi-daemon
 
-echo -e "${GREEN}Step 9: Creating systemd service...${NC}"
+echo -e "${GREEN}Step 10: Creating systemd service...${NC}"
 
 cat > /etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
@@ -174,7 +220,7 @@ EOF
 # Reload systemd
 systemctl daemon-reload
 
-echo -e "${GREEN}Step 10: Enabling IP forwarding...${NC}"
+echo -e "${GREEN}Step 11: Enabling IP forwarding...${NC}"
 
 # Enable IP forwarding
 sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
@@ -189,7 +235,7 @@ iptables -A FORWARD -i wlan1 -o wlan0 -j ACCEPT
 apt-get install -y iptables-persistent
 netfilter-persistent save
 
-echo -e "${GREEN}Step 11: Enabling and starting services...${NC}"
+echo -e "${GREEN}Step 12: Enabling and starting services...${NC}"
 
 # Unmask and enable hostapd
 systemctl unmask hostapd
