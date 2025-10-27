@@ -111,7 +111,7 @@ USERS = {
    - Password: `Admin123`
 
 2. Open a web browser and navigate to:
-   - `http://wifi.local` or
+   - `http://AIS.local` (or `http://<hostname>.local` if you changed the hostname)
    - `http://192.168.4.1`
 
 3. Log in with:
@@ -308,10 +308,19 @@ sudo systemctl restart hostapd
 
 1. Ensure you're connected to the hotspot
 2. Try the IP address instead: `http://192.168.4.1`
-3. Check if the service is running:
+3. If using hostname.local (e.g., AIS.local), ensure avahi-daemon is running:
+```bash
+sudo systemctl status avahi-daemon
+```
+4. Check if the service is running:
 ```bash
 sudo systemctl status wifi-manager
 ```
+5. Verify the hostname:
+```bash
+hostname
+```
+The web interface will be accessible at `http://<hostname>.local` where `<hostname>` is the output of the above command.
 
 ### Cannot connect to networks
 
