@@ -55,6 +55,7 @@ apt-get install -y \
     dnsmasq \
     network-manager \
     avahi-daemon \
+    iptables \
     git
 
 echo -e "${GREEN}Step 3: Installing Python dependencies...${NC}"
