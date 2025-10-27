@@ -42,8 +42,8 @@ A comprehensive WiFi management system for Raspberry Pi 4B with hotspot capabili
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/wifi-manager.git
-cd wifi-manager
+git clone https://github.com/JLBMaritime/Hotspot_Wi-Fi_Manager.git
+cd Hotspot_Wi-Fi_Manager
 ```
 
 2. Run the installation script:
@@ -68,7 +68,7 @@ sudo apt-get install -y python3 python3-pip hostapd dnsmasq network-manager avah
 
 2. Install Python dependencies:
 ```bash
-pip3 install Flask Flask-HTTPAuth netifaces
+pip3 install --break-system-packages Flask Flask-HTTPAuth netifaces || pip3 install Flask Flask-HTTPAuth netifaces
 ```
 
 3. Configure hotspot (see Configuration section below)
@@ -365,7 +365,7 @@ sudo systemctl restart wifi-manager
 
 1. Install dependencies:
 ```bash
-pip3 install -r requirements.txt
+pip3 install --break-system-packages -r requirements.txt || pip3 install -r requirements.txt
 ```
 
 2. Run the application:
