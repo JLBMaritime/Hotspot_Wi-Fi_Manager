@@ -40,6 +40,11 @@ A comprehensive WiFi management system for Raspberry Pi 4B with hotspot capabili
 
 ### Quick Install
 
+If you need to install Git to download the repository
+```bash
+sudo apt-get install git
+```
+
 1. Clone this repository:
 ```bash
 git clone https://github.com/JLBMaritime/Hotspot_Wi-Fi_Manager.git
@@ -428,3 +433,4 @@ Developed for JLBMaritime AIS ADS-B Project
 ---
 
 **Raspberry Pi 4B | 64-bit Raspberry Pi OS (Bookworm) | Python 3 | Flask**
+
