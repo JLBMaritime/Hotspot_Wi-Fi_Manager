@@ -1,5 +1,6 @@
 // WiFi Manager JavaScript
 let currentSSID = null;
+let savedNetworkSSIDs = [];
 let updateInterval = null;
 
 // Initialize on page load
@@ -79,8 +80,8 @@ function loadAvailableNetworks() {
             if (data.success && data.networks.length > 0) {
                 container.innerHTML = '';
                 data.networks.forEach(network => {
-                    // Skip if this is the current connection
-                    if (network.ssid === currentSSID) return;
+                    // Skip if this is a saved network
+                    if (savedNetworkSSIDs.includes(network.ssid)) return;
                     
                     const networkElement = createNetworkElement(network, false);
                     container.appendChild(networkElement);
@@ -115,8 +116,8 @@ function rescanNetworks() {
             if (data.success && data.networks.length > 0) {
                 container.innerHTML = '';
                 data.networks.forEach(network => {
-                    // Skip if this is the current connection
-                    if (network.ssid === currentSSID) return;
+                    // Skip if this is a saved network
+                    if (savedNetworkSSIDs.includes(network.ssid)) return;
                     
                     const networkElement = createNetworkElement(network, false);
                     container.appendChild(networkElement);
@@ -150,12 +151,16 @@ function loadSavedNetworks() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.networks.length > 0) {
+                // Update saved networks list for filtering
+                savedNetworkSSIDs = data.networks.map(n => n.ssid);
+                
                 container.innerHTML = '';
                 data.networks.forEach(network => {
                     const networkElement = createNetworkElement(network, true);
                     container.appendChild(networkElement);
                 });
             } else {
+                savedNetworkSSIDs = [];
                 container.innerHTML = '<div class="loading">No saved networks</div>';
             }
         })
@@ -209,21 +214,23 @@ function createNetworkElement(network, isSaved) {
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'network-actions';
     
-    // Connect button
-    const connectBtn = document.createElement('button');
-    connectBtn.className = 'btn btn-secondary';
-    connectBtn.textContent = 'Connect';
-    
-    // Different behavior for saved networks vs available networks
-    if (isSaved) {
-        // Saved networks: direct connect with confirmation (no password needed)
-        connectBtn.addEventListener('click', () => connectToSavedNetwork(network.ssid));
-    } else {
-        // Available networks: show password modal
-        connectBtn.addEventListener('click', () => showPasswordModal(network.ssid));
+    // Connect button (hide for currently connected network in saved networks)
+    if (!isSaved || network.ssid !== currentSSID) {
+        const connectBtn = document.createElement('button');
+        connectBtn.className = 'btn btn-secondary';
+        connectBtn.textContent = 'Connect';
+        
+        // Different behavior for saved networks vs available networks
+        if (isSaved) {
+            // Saved networks: direct connect with confirmation (no password needed)
+            connectBtn.addEventListener('click', () => connectToSavedNetwork(network.ssid));
+        } else {
+            // Available networks: show password modal
+            connectBtn.addEventListener('click', () => showPasswordModal(network.ssid));
+        }
+        
+        actionsDiv.appendChild(connectBtn);
     }
-    
-    actionsDiv.appendChild(connectBtn);
     
     // Forget button (only for saved networks, not current connection)
     if (isSaved && network.ssid !== currentSSID) {
